@@ -145,6 +145,14 @@
     </div>
 
     <div class="sec">
+      <h2>色分けモード</h2>
+      <div class="filter-row">
+        <span class="chip mchip" data-mode="type">🎨 属性で色分け</span>
+        <span class="chip mchip" data-mode="visit">✅ 訪問状況で色分け</span>
+      </div>
+    </div>
+
+    <div class="sec">
       <h2>市区で絞り込み</h2>
       <div class="filter-row" id="areaFilters"></div>
       <div class="opts">
@@ -330,20 +338,38 @@ function osmExtra(s){
   if(s.ig) rows.push(`<a href="https://instagram.com/${String(s.ig).replace(/^@/,"")}" target="_blank" rel="noopener">📷 Instagram</a>`);
   return rows.length ? `<p class="dmeta">${rows.join("<br>")}</p>` : "";
 }
+// ----- 色分けモード（属性 / 訪問状況） -----
+const MKEY = "color_mode_v1";
+let colorMode = localStorage.getItem(MKEY) || "type";
+const osmKey = s => s.n || `無名店(${s.lat},${s.lng})`;   // 訪問記録のキー（名称未登録の店は座標で識別）
+function dotColor(s){
+  if(s.c) return "#9ca3af";
+  if(colorMode==="visit") return isVisited(osmKey(s)) ? "#9ca3af" : "#e6194B";
+  return (TYPE[s.s] || TYPE.clothes).c;
+}
+
 function osmDetailHtml(s){
   const t = TYPE[s.s] || TYPE.clothes;
+  const k = osmKey(s);
   return `<h3>${s.n||"（名称未登録）"}</h3>
-    <p class="dmeta">${t.label}${s.c?" ｜ <b>大手チェーン</b>":""}<br><b style="color:${muColor(s.mu)}">${s.mu}</b>（${s.st}駅周辺）</p>${osmExtra(s)}`;
+    <p class="dmeta">${t.label}${s.c?" ｜ <b>大手チェーン</b>":""}<br><b style="color:${muColor(s.mu)}">${s.mu}</b>（${s.st}駅周辺）</p>${osmExtra(s)}
+    ${s.c?"":`<label class="dvisit"><input type="checkbox" class="dchk" ${isVisited(k)?"checked":""}> 訪問済みにする</label>
+    ${visitLabel(k)?`<p class="dmeta vwho" style="margin-top:6px;">✅ ${visitLabel(k)}</p>`:""}`}`;
+}
+function showOsmDetail(s){
+  openDetail(osmDetailHtml(s), ()=>{
+    const chk=document.querySelector("#detailBody .dchk");
+    if(chk) chk.onchange=e=>{ setVisited(osmKey(s), e.target.checked); render(); showOsmDetail(s); };
+  });
 }
 function osmMarker(s){
-  const t = TYPE[s.s] || TYPE.clothes;
   const m = L.circleMarker([s.lat,s.lng], { radius:s.c?3.5:4.5, weight:1, color:"#fff",
-    fillColor: s.c ? "#9ca3af" : t.c, fillOpacity: s.c?0.55:0.9 });
-  m.on("click", ()=> openDetail(osmDetailHtml(s)));
+    fillColor: dotColor(s), fillOpacity: s.c?0.55:0.9 });
+  m.on("click", ()=> showOsmDetail(s));
   return m;
 }
-const indieMarkers = OSM_SHOPS.filter(s=>!s.c).map(s=>({ m:osmMarker(s), mu:s.mu }));
-const chainMarkers = OSM_SHOPS.filter(s=> s.c).map(s=>({ m:osmMarker(s), mu:s.mu }));
+const indieMarkers = OSM_SHOPS.filter(s=>!s.c).map(s=>({ m:osmMarker(s), mu:s.mu, s }));
+const chainMarkers = OSM_SHOPS.filter(s=> s.c).map(s=>({ m:osmMarker(s), mu:s.mu, s }));
 
 // ----- 営業ターゲット -----
 const targetMarkers = {};
@@ -351,7 +377,7 @@ function targetIcon(s){
   const sz = s.prio==="◎"?20:15;
   const v = isVisited(s.name);
   return L.divIcon({ className:"",
-    html:`<div class="pin ${s.prio==='◎'?'prio':''} ${v?'done':''}" style="width:${sz}px;height:${sz}px;background:${v?'#9ca3af':muColor(s.mu)};font-size:${sz-9}px;">${v?'✓':''}</div>`,
+    html:`<div class="pin ${s.prio==='◎'?'prio':''} ${v?'done':''}" style="width:${sz}px;height:${sz}px;background:${v?'#9ca3af':(colorMode==="visit"?"#e6194B":muColor(s.mu))};font-size:${sz-9}px;">${v?'✓':''}</div>`,
     iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
 }
 STORES.forEach(s=>{
@@ -381,6 +407,9 @@ Object.values(cb).forEach(c=>c.onchange=render);
 $("onlyPrio").onchange=render; $("hideVisited").onchange=render;
 $("nTarget").textContent=STORES.length; $("nIndie").textContent=indieTotal; $("nChain").textContent=chainTotal;
 $("detailClose").onclick=closeDetail;
+document.querySelectorAll(".mchip").forEach(c=>{
+  c.onclick=()=>{ colorMode=c.dataset.mode; localStorage.setItem(MKEY, colorMode); render(); };
+});
 
 // ----- 共有UI -----
 function updateSyncStatus(msg, cls){
@@ -451,9 +480,11 @@ const inMu = m => activeMu==="all" || m===activeMu;
 
 function render(){
   buildChips();
+  document.querySelectorAll(".mchip").forEach(c=>c.classList.toggle("active", c.dataset.mode===colorMode));
+  updateLegend();
   show(boundaryLayer, cb.bound.checked);
   show(labelLayer, cb.bound.checked);
-  indieMarkers.forEach(o=>show(o.m, cb.indie.checked && inMu(o.mu)));
+  indieMarkers.forEach(o=>{ show(o.m, cb.indie.checked && inMu(o.mu)); o.m.setStyle({fillColor:dotColor(o.s)}); });
   chainMarkers.forEach(o=>show(o.m, cb.chain.checked && inMu(o.mu)));
 
   const onlyPrio=$("onlyPrio").checked, hideV=$("hideVisited").checked;
@@ -488,16 +519,28 @@ function render(){
 
 function fitAll(){ map.fitBounds([[35.6628,139.5789],[35.7334,139.6708]]); }
 
-// ===== 凡例 =====
+// ===== 凡例（色分けモードに応じて切替） =====
 const legend=L.control({position:"topright"});
-legend.onAdd=()=>{ const d=L.DomUtil.create("div","legend");
+let legendDiv=null;
+legend.onAdd=()=>{ legendDiv=L.DomUtil.create("div","legend"); updateLegend(); return legendDiv; };
+function updateLegend(){
+  if(!legendDiv) return;
   let h='<b class="h">市区(境界線)</b>';
   Object.keys(MU).forEach(m=>{ h+=`<span class="sq" style="border-color:${MU[m]};background:${MU[m]}22"></span>${m}<br>`; });
-  h+='<hr><b class="h">服屋(OSM)</b>';
-  Object.values(TYPE).forEach(t=>{ h+=`<span class="dot" style="background:${t.c}"></span>${t.label}<br>`; });
-  h+=`<span class="dot" style="background:#9ca3af"></span>大手チェーン(参考)`;
-  h+='<hr><b class="h">営業ターゲット(厳選)</b><span class="dot" style="background:#999;border:2px solid #f5c518"></span>◎最有力 / <span class="dot" style="background:#999"></span>○候補<br><span class="dot" style="background:#9ca3af;color:#fff;font-size:9px;font-weight:800;text-align:center;line-height:11px;">✓</span>訪問済み';
-  d.innerHTML=h; return d; };
+  if(colorMode==="visit"){
+    h+='<hr><b class="h">訪問状況</b>';
+    h+='<span class="dot" style="background:#e6194B"></span>未訪問<br>';
+    h+='<span class="dot" style="background:#9ca3af;color:#fff;font-size:9px;font-weight:800;text-align:center;line-height:11px;">✓</span>訪問済み<br>';
+    h+='<span class="dot" style="background:#9ca3af"></span>大手チェーン(参考)';
+    h+='<hr><b class="h">営業ターゲット(厳選)</b><span class="dot" style="background:#999;border:2px solid #f5c518"></span>◎最有力（金リング）';
+  } else {
+    h+='<hr><b class="h">服屋(OSM)</b>';
+    Object.values(TYPE).forEach(t=>{ h+=`<span class="dot" style="background:${t.c}"></span>${t.label}<br>`; });
+    h+=`<span class="dot" style="background:#9ca3af"></span>大手チェーン(参考)`;
+    h+='<hr><b class="h">営業ターゲット(厳選)</b><span class="dot" style="background:#999;border:2px solid #f5c518"></span>◎最有力 / <span class="dot" style="background:#999"></span>○候補<br><span class="dot" style="background:#9ca3af;color:#fff;font-size:9px;font-weight:800;text-align:center;line-height:11px;">✓</span>訪問済み';
+  }
+  legendDiv.innerHTML=h;
+}
 legend.addTo(map);
 
 // ===== モバイルタブ（地図⇔リスト） =====
