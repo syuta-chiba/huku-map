@@ -73,8 +73,9 @@
   .legend b.h { display:block; margin:5px 0 2px; }
   .legend hr { border:none; border-top:1px solid #e5e7eb; margin:6px 0; }
 
-  .pin { border-radius:50%; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.45); }
+  .pin { border-radius:50%; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; line-height:1; }
   .pin.prio { border:3px solid #f5c518; }
+  .pin.done { opacity:.85; }
   .mulabel { font-size:15px; font-weight:800; color:#1f2937; text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 4px #fff,0 0 4px #fff; white-space:nowrap; transform:translate(-50%,-50%); }
 
   .popup h3 { margin:0 0 4px; font-size:15px; }
@@ -346,11 +347,15 @@ const chainMarkers = OSM_SHOPS.filter(s=> s.c).map(s=>({ m:osmMarker(s), mu:s.mu
 
 // ----- 営業ターゲット -----
 const targetMarkers = {};
+function targetIcon(s){
+  const sz = s.prio==="◎"?20:15;
+  const v = isVisited(s.name);
+  return L.divIcon({ className:"",
+    html:`<div class="pin ${s.prio==='◎'?'prio':''} ${v?'done':''}" style="width:${sz}px;height:${sz}px;background:${v?'#9ca3af':muColor(s.mu)};font-size:${sz-9}px;">${v?'✓':''}</div>`,
+    iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+}
 STORES.forEach(s=>{
-  const col = muColor(s.mu); const sz = s.prio==="◎"?20:15;
-  const m = L.marker([s.lat,s.lng], { zIndexOffset:500, icon:L.divIcon({ className:"",
-    html:`<div class="pin ${s.prio==='◎'?'prio':''}" style="width:${sz}px;height:${sz}px;background:${col}"></div>`,
-    iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] }) });
+  const m = L.marker([s.lat,s.lng], { zIndexOffset:500, icon:targetIcon(s) });
   m.on("click", ()=> showTargetDetail(s));
   targetMarkers[s.name]=m;
 });
@@ -455,7 +460,7 @@ function render(){
   const visT = STORES.filter(s=> inMu(s.mu) && (!onlyPrio||s.prio==="◎") && (!hideV||!isVisited(s.name)));
   const visNames=new Set(visT.map(s=>s.name));
   STORES.forEach(s=>{ const m=targetMarkers[s.name];
-    const v=cb.target.checked && visNames.has(s.name); show(m,v); if(v) m.setOpacity(isVisited(s.name)?0.45:1); });
+    const v=cb.target.checked && visNames.has(s.name); show(m,v); if(v) m.setIcon(targetIcon(s)); });
 
   const list=$("list"); list.innerHTML="";
   if(cb.target.checked && visT.length){
@@ -491,7 +496,7 @@ legend.onAdd=()=>{ const d=L.DomUtil.create("div","legend");
   h+='<hr><b class="h">服屋(OSM)</b>';
   Object.values(TYPE).forEach(t=>{ h+=`<span class="dot" style="background:${t.c}"></span>${t.label}<br>`; });
   h+=`<span class="dot" style="background:#9ca3af"></span>大手チェーン(参考)`;
-  h+='<hr><b class="h">営業ターゲット(厳選)</b><span class="dot" style="background:#999;border:2px solid #f5c518"></span>◎最有力 / <span class="dot" style="background:#999"></span>○候補';
+  h+='<hr><b class="h">営業ターゲット(厳選)</b><span class="dot" style="background:#999;border:2px solid #f5c518"></span>◎最有力 / <span class="dot" style="background:#999"></span>○候補<br><span class="dot" style="background:#9ca3af;color:#fff;font-size:9px;font-weight:800;text-align:center;line-height:11px;">✓</span>訪問済み';
   d.innerHTML=h; return d; };
 legend.addTo(map);
 
