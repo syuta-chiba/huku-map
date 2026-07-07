@@ -503,7 +503,7 @@ function render(){
         <div class="meta">${s.cat}・${s.station}</div><div class="note">${s.note}</div>
         <div class="visit"><label><input type="checkbox" class="lchk" ${isVisited(s.name)?"checked":""}> 訪問済み</label>${visitLabel(s.name)?` <span class="vwho">${visitLabel(s.name)}</span>`:""}</div>`;
       d.querySelector(".lchk").onclick=e=>{ e.stopPropagation(); setVisited(s.name,e.target.checked); render(); };
-      d.onclick=()=>{ if(isMobile()) setTab("map"); map.setView([s.lat,s.lng],17); showTargetDetail(s); };
+      d.onclick=()=>{ if(isMobile()) focusOnMap(s); else { map.setView([s.lat,s.lng],17); showTargetDetail(s); } };
       list.appendChild(d);
     });
     $("count").textContent=`営業ターゲット ${visT.length}件 / 全${STORES.length}件`;
@@ -553,6 +553,17 @@ function setTab(t){
 document.querySelectorAll("#tabbar button").forEach(b=>{ b.onclick=()=>setTab(b.dataset.tab); });
 const isMobile = () => matchMedia("(max-width:760px)").matches;
 setTab("map");
+
+// リストから店タップ→地図タブへ切替して店に照準（スマホ用）
+function focusOnMap(s){
+  setTab("map");
+  setTimeout(()=>{   // タブ切替直後は地図が非表示から復帰するためサイズ再計算後に移動
+    map.invalidateSize();
+    map.setView([s.lat,s.lng], 17);
+    const ring = L.circleMarker([s.lat,s.lng], { radius:24, weight:4, color:"#f5c518", fill:false, interactive:false }).addTo(map);
+    setTimeout(()=>map.removeLayer(ring), 2600);
+  }, 90);
+}
 
 // ===== 初期化 =====
 buildSummary(); render(); fitAll();
