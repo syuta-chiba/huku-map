@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -188,7 +188,7 @@
 
     <footer>
       服屋データ＝<b>OpenStreetMap</b>(杉並区全域)から取得し、ユニクロ等の超大手・買取/質・誤登録を除外した個人/独立系。<b>OSM登録ベースなので実数より少なめ</b>。<br>
-      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07g
+      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07h
     </footer>
   </div>
   <div id="map"></div>
@@ -378,11 +378,22 @@ const indieTotal = OSM_SHOPS.filter(s=>!s.c).length;
 const chainTotal = OSM_SHOPS.filter(s=> s.c).length;
 
 // ----- 右パネル（詳細） -----
+let detailOpenedAt = 0;
 function openDetail(html, after){
   document.getElementById("detailBody").innerHTML = html;
   document.getElementById("detail").classList.add("open");
+  detailOpenedAt = Date.now();
   if(after) after();
 }
+// パネルの外側をタップしたら閉じる（スマホのみ）
+document.addEventListener("click", e=>{
+  if(!isMobile()) return;
+  const d = document.getElementById("detail");
+  if(!d.classList.contains("open")) return;
+  if(Date.now() - detailOpenedAt < 350) return;   // 開いた直後の同一タップは無視
+  if(d.contains(e.target)) return;
+  closeDetail();
+}, true);
 function closeDetail(){
   document.getElementById("detailBody").innerHTML = `<div class="detailEmpty">地図上の店舗（点）をクリックすると、<br>ここに詳細が表示されます。</div>`;
   document.getElementById("detail").classList.remove("open");
