@@ -45,6 +45,8 @@
   .store .meta { font-size:11.5px; color:#6b7280; margin:3px 0 0 22px; }
   .store .note { font-size:12px; color:#374151; margin:5px 0 0 22px; line-height:1.5; }
   .store .visit { font-size:11.5px; margin:6px 0 0 22px; color:#475569; }
+  .store .links p { margin:4px 0 0 22px; font-size:11.5px; line-height:1.7; }
+  .store .links a { color:#2563eb; }
   .empty { padding:14px; font-size:12.5px; color:#9ca3af; }
   .listHead { padding:8px 13px 6px; font-size:11.5px; font-weight:700; color:#475569; background:#f1f5f9; border-bottom:1px solid #e5e7eb; }
 
@@ -189,7 +191,7 @@
 
     <footer>
       服屋データ＝<b>OpenStreetMap</b>(杉並区全域)から取得し、ユニクロ等の超大手・買取/質・誤登録を除外した個人/独立系。<b>OSM登録ベースなので実数より少なめ</b>。<br>
-      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07j
+      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07k
     </footer>
   </div>
   <div id="map"></div>
@@ -400,15 +402,23 @@ function closeDetail(){
   document.getElementById("detail").classList.remove("open");
 }
 
+// ----- 店舗リンク集（Web検索で自動収集したInstagram/公式サイト。キー=店名） -----
+const STORE_LINKS = {"alt（アルト）":{"ig":"https://www.instagram.com/alt_store_official/"},"often（オフトン）":{"ig":"https://www.instagram.com/often24ogi/","web":"https://often24ogi.official.ec"},"ototoharu（オトトハル）":{"ig":"https://www.instagram.com/ototoharu/"},"kuki（クキ）":{"ig":"https://www.instagram.com/kuki___2021/","web":"https://kukivintage.official.ec"},"militaria（ミリタリア）":{"ig":"https://www.instagram.com/militaria_tokyo/","web":"https://militariatky.thebase.in/"},"Slat 本店":{"ig":"https://www.instagram.com/slat_vintage_clothing_koenji/","web":"https://fortyone-s.com/"},"あーる工房":{"web":"https://www.rkobo.jp/"},"リサイクルきもの grape":{"web":"http://www.kimono-grape.com/"},"yahso（ヤッソ）":{"ig":"https://www.instagram.com/yahsogram/","web":"http://yahso.jp/"},"easychic（イージーシック）":{"ig":"https://www.instagram.com/easychic_vintage/","web":"https://easychic.thebase.in/"},"Jacob's Ladder（ジェイコブスラダー）":{"ig":"https://www.instagram.com/jacobsladdervintage/","web":"http://www.jacobsladder.jp/"},"AiLeen by GROGGROG":{"ig":"https://www.instagram.com/aileen_by_groggrog_vintage/"},"Liberal（リベラル）":{"ig":"https://www.instagram.com/liberal_koenji/","web":"https://liberal413.thebase.in/"},"COLOR":{"ig":"https://www.instagram.com/colors_asagaya/","web":"https://fashionoutlet.jp/shoplist/asagaya/"},"すみれ洋裁店":{"ig":"https://www.instagram.com/k.t_sumire/","web":"https://peraichi.com/landing_pages/view/xvava"},"エクリュモダンオリエンタル":{"ig":"https://www.instagram.com/ecru.mo/","web":"http://www.asagaya.or.jp/map/7han/modern-oriental.html"},"きもの倶楽部 風流":{"ig":"https://www.instagram.com/kimonoclubhuryuu/","web":"https://huryuu.shop-pro.jp/"},"COPO":{"ig":"https://www.instagram.com/copo_net/","web":"https://copo-net.jp/"},"O.d.B":{"ig":"https://www.instagram.com/odd.delay.blue/","web":"https://shop.odb-c.net/"},"KAWAMURA":{"web":"http://mskawamura.jp/"},"CANDY WOOD":{"ig":"https://www.instagram.com/candywood.tokyo/","web":"https://candywood.theshop.jp/"},"Comyu":{"ig":"https://www.instagram.com/comyu_tokyo/","web":"https://comyu.shop-pro.jp/"},"ヨーカ堂":{"ig":"https://www.instagram.com/itoyokado_official/","web":"https://www.itoyokado.co.jp/"},"越後屋呉服店":{"web":"http://www.asagaya.or.jp/map/2han/echigoya.html"},"HAPPY JACK":{"ig":"https://www.instagram.com/happyjack.usedclothing/","web":"https://ameblo.jp/happyjack-used/"},"adoluvle retrist":{"ig":"https://www.instagram.com/adoluvle.jp/","web":"https://adoluvle.com/"},"STEADY-1":{"web":"https://steady1koenji.wixsite.com/seady-1"},"ZOOL":{"ig":"https://www.instagram.com/zool_jigowatt/","web":"https://zool.shopinfo.jp/"},"Leger":{"ig":"https://www.instagram.com/leger1202/","web":"https://leger1202.thebase.in/"},"KIKI":{"ig":"https://www.instagram.com/kiki_honten/","web":"https://kikiweb.kawaiishop.jp/"},"D clothing":{"ig":"https://www.instagram.com/dclothingkoenji/","web":"https://dclothing.thebase.in/"},"SALLYROAD":{"web":"https://sallyroad.jp/"},"&Co":{"ig":"https://www.instagram.com/and_co_tokyo_store/","web":"https://andcoandco.base.shop/"},"Ourdoor Assist":{"ig":"https://www.instagram.com/outdoor_assist/","web":"http://www.outdoorassist.com/"},"Tatouage":{"ig":"https://www.instagram.com/tatouage_by_zool/"},"JOAH":{"ig":"https://www.instagram.com/joah__official/","web":"http://www.koenji-joah.com/"},"Manaboo":{"ig":"https://www.instagram.com/manaboo_hat_koenji/","web":"https://mana-shop.jp/"},"BIG TIME":{"ig":"https://www.instagram.com/big_time_koenji/","web":"https://bigtime.jp/"},"大黒屋":{"ig":"https://www.instagram.com/kimono_daikokuya/","web":"http://www.k-daikokuya.com/"},"Leberment":{"ig":"https://www.instagram.com/leberment_koenji_shop/","web":"https://www.leberment.org/"},"rokuromi":{"ig":"https://www.instagram.com/rokuromi6963/","web":"https://rokuromi.shop-pro.jp/"},"みずたまきのこ":{"ig":"https://www.instagram.com/mizutamakinoko_koenji/","web":"https://mizutamakinoko.shop/"},"KIKI2":{"ig":"https://www.instagram.com/kiki2_clothing/","web":"https://kikiweb.kawaiishop.jp/"},"LOVER SOUL":{"ig":"https://www.instagram.com/lover_soul_kouenji/","web":"https://kouenji-loversoul.com/"},"ADOLUVLE LITTLE":{"ig":"https://www.instagram.com/adoluvle.jp/","web":"https://adoluvle.com/"},"温故着新":{"ig":"https://www.instagram.com/onkokishin/","web":"http://on-ko-ki-shin.com/"},"GLOVEEEK":{"ig":"https://www.instagram.com/effectone.gloveeek/","web":"https://gloveeek.theshop.jp"},"Cat's Pawn":{"ig":"https://www.instagram.com/cats__paw/"},"Pink":{"web":"https://pinkfurugi.base.shop/"},"トイパラストア":{"web":"https://toypara.com/"},"マリヤ":{"web":"http://www7a.biglobe.ne.jp/~mariya/"},"Wara-bi":{"web":"https://wara-bi.shop/"},"Additional store___":{"ig":"https://www.instagram.com/additional_store/","web":"https://additionalstore.stores.jp/"},"SLUT":{"ig":"https://www.instagram.com/slat_vintage_clothing/","web":"https://fortyone-s.com/"},"Jacob's Ladder":{"ig":"https://www.instagram.com/jacobsladdervintage/","web":"http://www.jacobsladder.jp/"}};
+
 // ----- OSM個人系／チェーン -----
-function osmExtra(s){
+const igURL = v => /^https?:/.test(String(v)) ? v : `https://instagram.com/${String(v).replace(/^@/,"")}`;
+function linkRows(k, s){
+  const ex = STORE_LINKS[k] || {};
+  const web = (s && s.web) || ex.web;
+  const ig  = (s && s.ig)  || ex.ig;
   const rows=[];
-  if(s.ph) rows.push(`📞 ${s.ph}`);
-  if(s.hrs) rows.push(`🕒 ${s.hrs}`);
-  if(s.web) rows.push(`<a href="${s.web}" target="_blank" rel="noopener">🔗 サイト</a>`);
-  if(s.ig) rows.push(`<a href="https://instagram.com/${String(s.ig).replace(/^@/,"")}" target="_blank" rel="noopener">📷 Instagram</a>`);
+  if(s && s.ph) rows.push(`📞 <a href="tel:${s.ph}">${s.ph}</a>`);
+  if(s && s.hrs) rows.push(`🕒 ${s.hrs}`);
+  if(web) rows.push(`<a href="${web}" target="_blank" rel="noopener">🔗 サイト</a>`);
+  if(ig) rows.push(`<a href="${igURL(ig)}" target="_blank" rel="noopener">📷 Instagram</a>`);
   return rows.length ? `<p class="dmeta">${rows.join("<br>")}</p>` : "";
 }
+function osmExtra(s){ return linkRows(osmKey(s), s); }
 // ----- 色分けモード（属性 / 訪問状況） -----
 const MKEY = "color_mode_v1";
 let colorMode = localStorage.getItem(MKEY) || "type";
@@ -470,6 +480,7 @@ function targetDetailHtml(s){
   return `<h3>${s.prio} ${s.name}</h3>
     <p class="dmeta"><b style="color:${muColor(s.mu)}">${s.mu}</b> ・ ${s.cat} ・ ${s.station}</p>
     <p class="dnote">${s.note}</p>
+    ${linkRows(s.name, null)}
     <label class="dvisit"><input type="checkbox" class="dchk" ${isVisited(s.name)?"checked":""}> 訪問済みにする</label>
     ${visitLabel(s.name)?`<p class="dmeta vwho" style="margin-top:6px;">✅ ${visitLabel(s.name)}</p>`:""}
     ${memoHtml(s.name)}`;
@@ -597,8 +608,10 @@ function render(){
       d.innerHTML=`<div class="top"><span class="prio">${s.prio}</span><span class="name">${s.name}</span>
         <span class="area-tag" style="background:${muColor(s.mu)}">${s.mu}</span></div>
         <div class="meta">${s.cat}・${s.station}</div><div class="note">${s.note}</div>
+        <div class="links">${linkRows(s.name, null)}</div>
         <div class="visit"><label><input type="checkbox" class="lchk" ${isVisited(s.name)?"checked":""}> 訪問済み</label>${visitLabel(s.name)?` <span class="vwho">${visitLabel(s.name)}</span>`:""}</div>
         ${memoHtml(s.name)}`;
+      d.querySelectorAll("a").forEach(a=>a.onclick=e=>e.stopPropagation());
       d.querySelector(".lchk").onclick=e=>{ e.stopPropagation(); setVisited(s.name,e.target.checked); render(); };
       wireMemo(d, s.name, render);
       d.onclick=()=>{ if(isMobile()) focusOnMap(s); else { map.setView([s.lat,s.lng],17); showTargetDetail(s); } };
@@ -626,9 +639,11 @@ function render(){
         d.className="store"+(isVisited(k)?" visited":"");
         d.innerHTML=`<div class="top"><span class="name">${escapeHtml(s.n||"（名称未登録）")}</span>
           <span class="area-tag" style="background:${t.c}">${tagShort}</span></div>
-          <div class="meta">${s.st}駅周辺${s.ph?` ・ 📞${s.ph}`:""}${s.hrs?` ・ 🕒${s.hrs}`:""}</div>
+          <div class="meta">${s.st}駅周辺</div>
+          <div class="links">${linkRows(k, s)}</div>
           <div class="visit"><label><input type="checkbox" class="lchk" ${isVisited(k)?"checked":""}> 訪問済み</label>${visitLabel(k)?` <span class="vwho">${visitLabel(k)}</span>`:""}</div>
           ${memoHtml(k)}`;
+        d.querySelectorAll("a").forEach(a=>a.onclick=e=>e.stopPropagation());
         d.querySelector(".lchk").onclick=e=>{ e.stopPropagation(); setVisited(k,e.target.checked); render(); };
         wireMemo(d, k, render);
         d.onclick=()=>{ if(isMobile()) focusOnMap(s); else { map.setView([s.lat,s.lng],17); showOsmDetail(s); } };
