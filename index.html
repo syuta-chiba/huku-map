@@ -46,6 +46,7 @@
   .store .note { font-size:12px; color:#374151; margin:5px 0 0 22px; line-height:1.5; }
   .store .visit { font-size:11.5px; margin:6px 0 0 22px; color:#475569; }
   .empty { padding:14px; font-size:12.5px; color:#9ca3af; }
+  .listHead { padding:8px 13px 6px; font-size:11.5px; font-weight:700; color:#475569; background:#f1f5f9; border-bottom:1px solid #e5e7eb; }
 
   table.sum { width:100%; border-collapse:collapse; font-size:12.5px; }
   table.sum td { padding:4px 4px; border-bottom:1px solid #f0f0f0; }
@@ -188,7 +189,7 @@
 
     <footer>
       服屋データ＝<b>OpenStreetMap</b>(杉並区全域)から取得し、ユニクロ等の超大手・買取/質・誤登録を除外した個人/独立系。<b>OSM登録ベースなので実数より少なめ</b>。<br>
-      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07h
+      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07i
     </footer>
   </div>
   <div id="map"></div>
@@ -586,6 +587,9 @@ function render(){
 
   const list=$("list"); list.innerHTML="";
   if(cb.target.checked && visT.length){
+    const head=document.createElement("div");
+    head.className="listHead"; head.textContent=`◎ 営業ターゲット（厳選） ${visT.length}件`;
+    list.appendChild(head);
     visT.forEach(s=>{
       const d=document.createElement("div");
       d.className="store"+(isVisited(s.name)?" visited":"");
@@ -600,10 +604,45 @@ function render(){
       d.onclick=()=>{ if(isMobile()) focusOnMap(s); else { map.setView([s.lat,s.lng],17); showTargetDetail(s); } };
       list.appendChild(d);
     });
-    $("count").textContent=`営業ターゲット ${visT.length}件 / 全${STORES.length}件`;
-  } else {
-    list.innerHTML=`<div class="empty">${cb.target.checked?"この市区の厳選ターゲットは未選定。地図の点(個人系の服屋)から開拓してください。":"営業ターゲット表示はOFFです。"}</div>`;
+  } else if(cb.target.checked){
+    list.innerHTML=`<div class="empty">条件に合う営業ターゲットがありません。</div>`;
+  }
+
+  // ----- 一般の個人店（OSM 195件）も駅ごとに全件リスト表示 -----
+  let osmShown = 0;
+  if(cb.indie.checked && !onlyPrio){
+    const items = OSM_SHOPS.filter(s=>!s.c && inMu(s.mu) && (!hideV || !isVisited(osmKey(s))));
+    const byStation = {};
+    items.forEach(s=>{ (byStation[s.st] = byStation[s.st] || []).push(s); });
+    Object.keys(byStation).sort((a,b)=>byStation[b].length-byStation[a].length).forEach(st=>{
+      const g = byStation[st].sort((a,b)=>(a.n||"").localeCompare(b.n||"", "ja"));
+      const head=document.createElement("div");
+      head.className="listHead"; head.textContent=`${st}駅周辺の個人店 ${g.length}件`;
+      list.appendChild(head);
+      g.forEach(s=>{
+        const k = osmKey(s), t = TYPE[s.s] || TYPE.clothes;
+        const tagShort = {clothes:"服", second_hand:"古着", tailor:"仕立て", fashion_accessories:"雑貨", boutique:"ブティック"}[s.s] || "服";
+        const d=document.createElement("div");
+        d.className="store"+(isVisited(k)?" visited":"");
+        d.innerHTML=`<div class="top"><span class="name">${escapeHtml(s.n||"（名称未登録）")}</span>
+          <span class="area-tag" style="background:${t.c}">${tagShort}</span></div>
+          <div class="meta">${s.st}駅周辺${s.ph?` ・ 📞${s.ph}`:""}${s.hrs?` ・ 🕒${s.hrs}`:""}</div>
+          <div class="visit"><label><input type="checkbox" class="lchk" ${isVisited(k)?"checked":""}> 訪問済み</label>${visitLabel(k)?` <span class="vwho">${visitLabel(k)}</span>`:""}</div>
+          ${memoHtml(k)}`;
+        d.querySelector(".lchk").onclick=e=>{ e.stopPropagation(); setVisited(k,e.target.checked); render(); };
+        wireMemo(d, k, render);
+        d.onclick=()=>{ if(isMobile()) focusOnMap(s); else { map.setView([s.lat,s.lng],17); showOsmDetail(s); } };
+        list.appendChild(d);
+      });
+    });
+    osmShown = items.length;
+  }
+
+  if(!list.children.length){
+    list.innerHTML=`<div class="empty">表示できる店舗がありません（レイヤーやフィルタを確認してください）。</div>`;
     $("count").textContent="";
+  } else {
+    $("count").textContent=`ターゲット ${cb.target.checked?visT.length:0}件 ＋ 個人店 ${osmShown}件`;
   }
 
   const vIndie = OSM_SHOPS.filter(s=>!s.c && inMu(s.mu)).length;
