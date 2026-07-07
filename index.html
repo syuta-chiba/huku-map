@@ -94,11 +94,20 @@
   .detailBody a { color:#2563eb; }
   .detailBody .area-tag { font-size:10.5px; color:#fff; padding:1px 7px; border-radius:9px; white-space:nowrap; }
 
+  #tabbar { display:none; }
+
   @media (max-width:760px){
-    #app{flex-direction:column;} #sidebar{width:100%;min-width:0;height:45%;} #map{height:55%;}
+    #app{flex-direction:column; height:100vh; height:100dvh; padding-bottom:calc(48px + env(safe-area-inset-bottom));}
+    #sidebar{width:100%; min-width:0; height:auto; flex:1;}
+    #map{height:auto; flex:1;}
+    body.tab-map #sidebar{display:none;}
+    body.tab-list #map{display:none;}
     #sidebar header{position:static;}
     #detail{position:fixed; inset:0; width:100%; min-width:0; height:100%; z-index:20; transform:translateX(100%); transition:transform .2s; border-left:none;}
     #detail.open{transform:translateX(0);}
+    #tabbar{display:flex; position:fixed; left:0; right:0; bottom:0; z-index:15; background:#1f2937; padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -1px 6px rgba(0,0,0,.25);}
+    #tabbar button{flex:1; padding:13px 0 12px; font-size:14px; font-weight:700; color:#9ca3af; background:none; border:none; border-top:3px solid transparent; cursor:pointer;}
+    #tabbar button.active{color:#fff; border-top-color:#f5c518;}
   }
 </style>
 </head>
@@ -164,6 +173,10 @@
     <button id="detailClose" class="detailClose" aria-label="閉じる" title="閉じる">✕</button>
     <div id="detailBody" class="detailBody"><div class="detailEmpty">地図上の店舗（点）をクリックすると、<br>ここに詳細が表示されます。</div></div>
   </div>
+</div>
+<div id="tabbar">
+  <button data-tab="map" class="active">🗺 地図</button>
+  <button data-tab="list">📋 リスト</button>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -454,7 +467,7 @@ function render(){
         <div class="meta">${s.cat}・${s.station}</div><div class="note">${s.note}</div>
         <div class="visit"><label><input type="checkbox" class="lchk" ${isVisited(s.name)?"checked":""}> 訪問済み</label>${visitLabel(s.name)?` <span class="vwho">${visitLabel(s.name)}</span>`:""}</div>`;
       d.querySelector(".lchk").onclick=e=>{ e.stopPropagation(); setVisited(s.name,e.target.checked); render(); };
-      d.onclick=()=>{ map.setView([s.lat,s.lng],17); showTargetDetail(s); };
+      d.onclick=()=>{ if(isMobile()) setTab("map"); map.setView([s.lat,s.lng],17); showTargetDetail(s); };
       list.appendChild(d);
     });
     $("count").textContent=`営業ターゲット ${visT.length}件 / 全${STORES.length}件`;
@@ -481,6 +494,17 @@ legend.onAdd=()=>{ const d=L.DomUtil.create("div","legend");
   h+='<hr><b class="h">営業ターゲット(厳選)</b><span class="dot" style="background:#999;border:2px solid #f5c518"></span>◎最有力 / <span class="dot" style="background:#999"></span>○候補';
   d.innerHTML=h; return d; };
 legend.addTo(map);
+
+// ===== モバイルタブ（地図⇔リスト） =====
+function setTab(t){
+  document.body.classList.toggle("tab-map", t==="map");
+  document.body.classList.toggle("tab-list", t==="list");
+  document.querySelectorAll("#tabbar button").forEach(b=>b.classList.toggle("active", b.dataset.tab===t));
+  if(t==="map") setTimeout(()=>map.invalidateSize(), 60);   // 非表示中のサイズ変化をLeafletに反映
+}
+document.querySelectorAll("#tabbar button").forEach(b=>{ b.onclick=()=>setTab(b.dataset.tab); });
+const isMobile = () => matchMedia("(max-width:760px)").matches;
+setTab("map");
 
 // ===== 初期化 =====
 buildSummary(); render(); fitAll();
