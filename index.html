@@ -67,6 +67,16 @@
   #syncForm .hint { font-size:11px; color:#94a3b8; margin-top:4px; line-height:1.5; }
   .vwho { color:#0f766e; }
 
+  .memoText { font-size:12px; color:#92400e; background:#fef3c7; border-radius:6px; padding:6px 8px; margin:6px 0 0 22px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+  .memoBtn { margin:6px 0 0 22px; font-size:11.5px; padding:4px 10px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; color:#475569; }
+  .memoEdit { margin:6px 0 0 22px; }
+  .memoEdit textarea { width:100%; font-size:13px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit; }
+  .memoEdit .memoSave { margin-top:4px; font-size:12px; padding:5px 14px; border-radius:6px; border:1px solid #1f2937; background:#1f2937; color:#fff; cursor:pointer; }
+  .detailBody .memoText, .detailBody .memoBtn, .detailBody .memoEdit { margin-left:0; }
+
+  .visitcount { background:rgba(255,255,255,.95); padding:6px 10px; border-radius:6px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+  .visitcount b { color:#0f766e; font-size:15px; }
+
   #map { flex:1; height:100%; }
   .legend { background:rgba(255,255,255,.95); padding:8px 10px; border-radius:6px; font-size:12px; line-height:1.65; box-shadow:0 1px 4px rgba(0,0,0,.2); max-width:210px; }
   .legend .dot { width:11px; height:11px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:-1px; }
@@ -175,7 +185,7 @@
 
     <footer>
       服屋データ＝<b>OpenStreetMap</b>(杉並区全域)から取得し、ユニクロ等の超大手・買取/質・誤登録を除外した個人/独立系。<b>OSM登録ベースなので実数より少なめ</b>。<br>
-      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェックは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。
+      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07e
     </footer>
   </div>
   <div id="map"></div>
@@ -232,19 +242,24 @@ const STORES = [
 ];
 STORES.forEach(s => s.mu = A2M[s.area]);
 
-// ===== 訪問状態（GitHubで2人共有） =====
+// ===== 訪問状態・メモ（GitHubで2人共有） =====
 // visited[店名] = { by:"名前", at:"ISO日時" }。旧形式の true も訪問済みとして扱う
+// memos[店名] = { text:"メモ", by:"名前", at:"ISO日時" }
 const VKEY = "visited_stores_v1", PKEY = "visited_pending_v1", SKEY = "gh_sync_v1";
+const MEMKEY = "store_memos_v1", PMKEY = "memos_pending_v1";
 let visited = JSON.parse(localStorage.getItem(VKEY) || "{}");
 let pending = JSON.parse(localStorage.getItem(PKEY) || "{}");   // 保存ボタン未押下の変更: 店名→entry / null(チェック解除)
+let memos = JSON.parse(localStorage.getItem(MEMKEY) || "{}");
+let pendingMemos = JSON.parse(localStorage.getItem(PMKEY) || "{}");
 let syncCfg = JSON.parse(localStorage.getItem(SKEY) || '{"name":"","token":""}');
 const isVisited = n => !!visited[n];
-const visitLabel = n => {
-  const v = visited[n];
-  if(!v || v === true) return "";
-  const d = new Date(v.at);
-  return `${isNaN(d) ? "" : `${d.getMonth()+1}/${d.getDate()} `}${v.by || "?"}が訪問`;
+const stampLabel = (e, verb) => {
+  if(!e || e === true) return "";
+  const d = new Date(e.at);
+  return `${isNaN(d) ? "" : `${d.getMonth()+1}/${d.getDate()} `}${e.by || "?"}${verb}`;
 };
+const visitLabel = n => stampLabel(visited[n], "が訪問");
+const memoLabel = n => stampLabel(memos[n], "");
 function setVisited(n, on){
   if(on) visited[n] = { by: syncCfg.name || "名前未設定", at: new Date().toISOString() };
   else delete visited[n];
@@ -252,6 +267,36 @@ function setVisited(n, on){
   localStorage.setItem(VKEY, JSON.stringify(visited));
   localStorage.setItem(PKEY, JSON.stringify(pending));
   updateSyncStatus();
+}
+function setMemo(n, text){
+  text = (text || "").trim();
+  if(text) memos[n] = { text, by: syncCfg.name || "名前未設定", at: new Date().toISOString() };
+  else delete memos[n];
+  pendingMemos[n] = text ? memos[n] : null;
+  localStorage.setItem(MEMKEY, JSON.stringify(memos));
+  localStorage.setItem(PMKEY, JSON.stringify(pendingMemos));
+  updateSyncStatus();
+}
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// メモの表示+編集ブロック（リスト項目・詳細パネル共通）
+function memoHtml(k){
+  const m = memos[k];
+  return `<div class="memoBox">
+    ${m && m.text ? `<div class="memoText">📝 ${escapeHtml(m.text)}<span class="vwho">（${memoLabel(k)}）</span></div>` : ""}
+    <button class="memoBtn" type="button">📝 メモを${m && m.text ? "編集" : "追加"}</button>
+    <div class="memoEdit" style="display:none;">
+      <textarea class="memoTa" rows="3" placeholder="例: 店主不在、来週再訪">${m && m.text ? escapeHtml(m.text) : ""}</textarea>
+      <button class="memoSave" type="button">メモを保存</button>
+    </div></div>`;
+}
+function wireMemo(root, k, refresh){
+  const btn = root.querySelector(".memoBtn");
+  if(!btn) return;
+  const ed = root.querySelector(".memoEdit"), ta = root.querySelector(".memoTa");
+  btn.onclick = e => { e.stopPropagation(); ed.style.display = ed.style.display === "none" ? "block" : "none"; if(ed.style.display==="block") ta.focus(); };
+  ta.onclick = e => e.stopPropagation();
+  root.querySelector(".memoSave").onclick = e => { e.stopPropagation(); setMemo(k, ta.value); refresh(); };
 }
 
 // ----- GitHub API（訪問記録は非公開リポジトリの visited.json に保存） -----
@@ -266,29 +311,38 @@ async function ghGet(){
   if(r.status === 404) return null;
   if(!r.ok) throw new Error(`取得失敗 (HTTP ${r.status})`);
   const j = await r.json();
-  return { sha: j.sha, data: JSON.parse(b64dec(j.content) || "{}") };
+  const data = JSON.parse(b64dec(j.content) || "{}");
+  const legacy = !data.visits && !data.memos;   // 旧形式（訪問マップが直置き）との互換
+  return { sha: j.sha, visits: legacy ? data : (data.visits || {}), memos: legacy ? {} : (data.memos || {}) };
 }
-function mergePending(remote){
-  const m = { ...remote };
-  for(const k in pending){ if(pending[k] === null) delete m[k]; else m[k] = pending[k]; }
-  return m;
+function mergePending(remoteV, remoteM){
+  const v = { ...remoteV };
+  for(const k in pending){ if(pending[k] === null) delete v[k]; else v[k] = pending[k]; }
+  const m = { ...remoteM };
+  for(const k in pendingMemos){ if(pendingMemos[k] === null) delete m[k]; else m[k] = pendingMemos[k]; }
+  return { v, m };
+}
+function applyMerged(merged){
+  visited = merged.v; memos = merged.m;
+  localStorage.setItem(VKEY, JSON.stringify(visited));
+  localStorage.setItem(MEMKEY, JSON.stringify(memos));
 }
 async function pullRemote(){
   const f = await ghGet();
-  visited = mergePending(f ? f.data : {});
-  localStorage.setItem(VKEY, JSON.stringify(visited));
+  applyMerged(mergePending(f ? f.visits : {}, f ? f.memos : {}));
   render();
 }
 async function saveRemote(){
   const f = await ghGet();   // 直前に最新を取得してマージ→相手の保存を消さない
-  const merged = mergePending(f ? f.data : {});
-  const body = { message: `訪問チェック更新 (${syncCfg.name || "?"})`, content: b64enc(JSON.stringify(merged, null, 1)) };
+  const merged = mergePending(f ? f.visits : {}, f ? f.memos : {});
+  const body = { message: `訪問記録更新 (${syncCfg.name || "?"})`, content: b64enc(JSON.stringify({ visits: merged.v, memos: merged.m }, null, 1)) };
   if(f) body.sha = f.sha;
   const r = await fetch(ghURL(), { method:"PUT", headers:{ ...ghHeaders(), "Content-Type":"application/json" }, body: JSON.stringify(body) });
   if(!r.ok) throw new Error(`保存失敗 (HTTP ${r.status})`);
-  visited = merged; pending = {};
-  localStorage.setItem(VKEY, JSON.stringify(visited));
+  applyMerged(merged);
+  pending = {}; pendingMemos = {};
   localStorage.setItem(PKEY, "{}");
+  localStorage.setItem(PMKEY, "{}");
   render();
 }
 
@@ -355,16 +409,24 @@ function osmDetailHtml(s){
   return `<h3>${s.n||"（名称未登録）"}</h3>
     <p class="dmeta">${t.label}${s.c?" ｜ <b>大手チェーン</b>":""}<br><b style="color:${muColor(s.mu)}">${s.mu}</b>（${s.st}駅周辺）</p>${osmExtra(s)}
     ${s.c?"":`<label class="dvisit"><input type="checkbox" class="dchk" ${isVisited(k)?"checked":""}> 訪問済みにする</label>
-    ${visitLabel(k)?`<p class="dmeta vwho" style="margin-top:6px;">✅ ${visitLabel(k)}</p>`:""}`}`;
+    ${visitLabel(k)?`<p class="dmeta vwho" style="margin-top:6px;">✅ ${visitLabel(k)}</p>`:""}
+    ${memoHtml(k)}`}`;
 }
 function showOsmDetail(s){
   openDetail(osmDetailHtml(s), ()=>{
-    const chk=document.querySelector("#detailBody .dchk");
+    const body=document.getElementById("detailBody");
+    const chk=body.querySelector(".dchk");
     if(chk) chk.onchange=e=>{ setVisited(osmKey(s), e.target.checked); render(); showOsmDetail(s); };
+    wireMemo(body, osmKey(s), ()=>{ render(); showOsmDetail(s); });
   });
 }
+function dotRadius(s){   // ズームに応じて点を拡大
+  const z = map.getZoom();
+  const base = z>=17 ? 10 : z>=16 ? 8 : z>=15 ? 6 : 4.5;
+  return s.c ? base*0.75 : base;
+}
 function osmMarker(s){
-  const m = L.circleMarker([s.lat,s.lng], { radius:s.c?3.5:4.5, weight:1, color:"#fff",
+  const m = L.circleMarker([s.lat,s.lng], { radius:dotRadius(s), weight:1, color:"#fff",
     fillColor: dotColor(s), fillOpacity: s.c?0.55:0.9 });
   m.on("click", ()=> showOsmDetail(s));
   return m;
@@ -375,7 +437,9 @@ const chainMarkers = OSM_SHOPS.filter(s=> s.c).map(s=>({ m:osmMarker(s), mu:s.mu
 // ----- 営業ターゲット -----
 const targetMarkers = {};
 function targetIcon(s){
-  const sz = s.prio==="◎"?20:15;
+  const z = map.getZoom();
+  const k = z>=17 ? 1.5 : z>=16 ? 1.3 : 1;   // ズームに応じてピンも拡大
+  const sz = Math.round((s.prio==="◎"?20:15)*k);
   const v = isVisited(s.name);
   return L.divIcon({ className:"",
     html:`<div class="pin ${s.prio==='◎'?'prio':''} ${v?'done':''}" style="width:${sz}px;height:${sz}px;background:${v?'#9ca3af':(colorMode==="visit"?"#e6194B":muColor(s.mu))};font-size:${sz-9}px;">${v?'✓':''}</div>`,
@@ -391,14 +455,24 @@ function targetDetailHtml(s){
     <p class="dmeta"><b style="color:${muColor(s.mu)}">${s.mu}</b> ・ ${s.cat} ・ ${s.station}</p>
     <p class="dnote">${s.note}</p>
     <label class="dvisit"><input type="checkbox" class="dchk" ${isVisited(s.name)?"checked":""}> 訪問済みにする</label>
-    ${visitLabel(s.name)?`<p class="dmeta vwho" style="margin-top:6px;">✅ ${visitLabel(s.name)}</p>`:""}`;
+    ${visitLabel(s.name)?`<p class="dmeta vwho" style="margin-top:6px;">✅ ${visitLabel(s.name)}</p>`:""}
+    ${memoHtml(s.name)}`;
 }
 function showTargetDetail(s){
   openDetail(targetDetailHtml(s), ()=>{
-    const chk=document.querySelector("#detailBody .dchk");
+    const body=document.getElementById("detailBody");
+    const chk=body.querySelector(".dchk");
     if(chk) chk.onchange=e=>{ setVisited(s.name,e.target.checked); render(); showTargetDetail(s); };
+    wireMemo(body, s.name, ()=>{ render(); showTargetDetail(s); });
   });
 }
+
+// ズーム変更時にマーカーサイズを更新
+map.on("zoomend", ()=>{
+  indieMarkers.forEach(o=>o.m.setRadius(dotRadius(o.s)));
+  chainMarkers.forEach(o=>o.m.setRadius(dotRadius(o.s)));
+  STORES.forEach(s=>{ const m=targetMarkers[s.name]; if(map.hasLayer(m)) m.setIcon(targetIcon(s)); });
+});
 
 // ===== UI =====
 let activeMu = "all";
@@ -417,7 +491,7 @@ function updateSyncStatus(msg, cls){
   const el = $("syncStatus");
   if(msg !== undefined){ el.textContent = msg; el.className = cls || ""; return; }
   if(!syncCfg.token){ el.textContent = "未設定：⚙から名前とトークンを設定すると2人で共有できます（今はこの端末のみに保存）"; el.className = "warn"; return; }
-  const n = Object.keys(pending).length;
+  const n = Object.keys(pending).length + Object.keys(pendingMemos).length;
   el.textContent = n ? `未保存の変更 ${n}件 —「保存」を押すと相手にも共有されます` : `共有ON（${syncCfg.name}）`;
   el.className = n ? "warn" : "";
 }
@@ -483,6 +557,7 @@ function render(){
   buildChips();
   document.querySelectorAll(".mchip").forEach(c=>c.classList.toggle("active", c.dataset.mode===colorMode));
   updateLegend();
+  updateVisitCount();
   show(boundaryLayer, cb.bound.checked);
   show(labelLayer, cb.bound.checked);
   indieMarkers.forEach(o=>{ show(o.m, cb.indie.checked && inMu(o.mu)); o.m.setStyle({fillColor:dotColor(o.s)}); });
@@ -503,8 +578,10 @@ function render(){
       d.innerHTML=`<div class="top"><span class="prio">${s.prio}</span><span class="name">${s.name}</span>
         <span class="area-tag" style="background:${muColor(s.mu)}">${s.mu}</span></div>
         <div class="meta">${s.cat}・${s.station}</div><div class="note">${s.note}</div>
-        <div class="visit"><label><input type="checkbox" class="lchk" ${isVisited(s.name)?"checked":""}> 訪問済み</label>${visitLabel(s.name)?` <span class="vwho">${visitLabel(s.name)}</span>`:""}</div>`;
+        <div class="visit"><label><input type="checkbox" class="lchk" ${isVisited(s.name)?"checked":""}> 訪問済み</label>${visitLabel(s.name)?` <span class="vwho">${visitLabel(s.name)}</span>`:""}</div>
+        ${memoHtml(s.name)}`;
       d.querySelector(".lchk").onclick=e=>{ e.stopPropagation(); setVisited(s.name,e.target.checked); render(); };
+      wireMemo(d, s.name, render);
       d.onclick=()=>{ if(isMobile()) focusOnMap(s); else { map.setView([s.lat,s.lng],17); showTargetDetail(s); } };
       list.appendChild(d);
     });
@@ -544,6 +621,19 @@ function updateLegend(){
   legendDiv.innerHTML=h;
 }
 legend.addTo(map);
+
+// ===== 訪問数カウンター（地図左下） =====
+const visitCtl = L.control({position:"bottomleft"});
+let visitDiv = null;
+visitCtl.onAdd = ()=>{ visitDiv = L.DomUtil.create("div","visitcount"); return visitDiv; };
+visitCtl.addTo(map);
+function updateVisitCount(){
+  if(!visitDiv) return;
+  let total = 0, done = 0;
+  STORES.forEach(s=>{ total++; if(isVisited(s.name)) done++; });
+  OSM_SHOPS.forEach(s=>{ if(s.c) return; total++; if(isVisited(osmKey(s))) done++; });
+  visitDiv.innerHTML = `✅ 訪問済み <b>${done}</b> / ${total} 店`;
+}
 
 // ===== モバイルタブ（地図⇔リスト） =====
 function setTab(t){
