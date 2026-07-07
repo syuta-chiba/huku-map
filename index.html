@@ -33,8 +33,9 @@
   #osmcount { font-size:13px; color:#0f172a; margin-top:8px; }
   #osmcount b.v { color:#0f766e; font-size:15px; }
 
-  .store { padding:11px 13px; border-bottom:1px solid #eee; cursor:pointer; }
+  .store { padding:11px 13px; border-bottom:1px solid #eee; cursor:pointer; transition:background .6s; }
   .store:hover { background:#eef2ff; }
+  .store.flash { background:#fde68a; }
   .store.visited { opacity:.5; }
   .store.visited .name { text-decoration:line-through; }
   .store .top { display:flex; align-items:center; gap:7px; }
@@ -382,7 +383,7 @@ function targetIcon(s){
 }
 STORES.forEach(s=>{
   const m = L.marker([s.lat,s.lng], { zIndexOffset:500, icon:targetIcon(s) });
-  m.on("click", ()=> showTargetDetail(s));
+  m.on("click", ()=> isMobile() ? focusOnList(s) : showTargetDetail(s));
   targetMarkers[s.name]=m;
 });
 function targetDetailHtml(s){
@@ -498,6 +499,7 @@ function render(){
     visT.forEach(s=>{
       const d=document.createElement("div");
       d.className="store"+(isVisited(s.name)?" visited":"");
+      d.dataset.name=s.name;
       d.innerHTML=`<div class="top"><span class="prio">${s.prio}</span><span class="name">${s.name}</span>
         <span class="area-tag" style="background:${muColor(s.mu)}">${s.mu}</span></div>
         <div class="meta">${s.cat}・${s.station}</div><div class="note">${s.note}</div>
@@ -553,6 +555,18 @@ function setTab(t){
 document.querySelectorAll("#tabbar button").forEach(b=>{ b.onclick=()=>setTab(b.dataset.tab); });
 const isMobile = () => matchMedia("(max-width:760px)").matches;
 setTab("map");
+
+// 地図のターゲットピンをタップ→リストタブへ切替して該当の店をハイライト（スマホ用）
+function focusOnList(s){
+  setTab("list");
+  const el = document.querySelector(`#list .store[data-name="${CSS.escape(s.name)}"]`);
+  if(!el){ showTargetDetail(s); return; }   // フィルタ等でリストに無い場合は従来の詳細表示
+  setTimeout(()=>{
+    el.scrollIntoView({block:"center"});
+    el.classList.add("flash");
+    setTimeout(()=>el.classList.remove("flash"), 1800);
+  }, 60);
+}
 
 // リストから店タップ→地図タブへ切替して店に照準（スマホ用）
 function focusOnMap(s){
