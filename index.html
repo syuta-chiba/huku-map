@@ -80,6 +80,12 @@
   .visitcount { background:rgba(255,255,255,.95); padding:6px 10px; border-radius:6px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.2); }
   .visitcount b { color:#0f766e; font-size:15px; }
 
+  .locbtn { width:42px; height:42px; border-radius:50%; border:1px solid #cbd5e1; background:#fff; font-size:20px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.3); padding:0; line-height:1; }
+  .locbtn.on { background:#2563eb; border-color:#2563eb; }
+  .locdot { width:16px; height:16px; border-radius:50%; background:#2563eb; border:3px solid #fff; box-shadow:0 1px 6px rgba(0,0,0,.4); position:relative; }
+  .locdot::after { content:""; position:absolute; inset:-8px; border-radius:50%; border:2px solid #2563eb; opacity:0; animation:locpulse 2s ease-out infinite; }
+  @keyframes locpulse { 0%{transform:scale(.5);opacity:.8;} 100%{transform:scale(1.6);opacity:0;} }
+
   #map { flex:1; height:100%; }
   .legend { background:rgba(255,255,255,.95); padding:8px 10px; border-radius:6px; font-size:12px; line-height:1.65; box-shadow:0 1px 4px rgba(0,0,0,.2); max-width:210px; }
   .legend .dot { width:11px; height:11px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:-1px; }
@@ -191,7 +197,7 @@
 
     <footer>
       服屋データ＝<b>OpenStreetMap</b>(杉並区全域)から取得し、ユニクロ等の超大手・買取/質・誤登録を除外した個人/独立系。<b>OSM登録ベースなので実数より少なめ</b>。<br>
-      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07k
+      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07l
     </footer>
   </div>
   <div id="map"></div>
@@ -405,15 +411,29 @@ function closeDetail(){
 // ----- 店舗リンク集（Web検索で自動収集したInstagram/公式サイト。キー=店名） -----
 const STORE_LINKS = {"alt（アルト）":{"ig":"https://www.instagram.com/alt_store_official/"},"often（オフトン）":{"ig":"https://www.instagram.com/often24ogi/","web":"https://often24ogi.official.ec"},"ototoharu（オトトハル）":{"ig":"https://www.instagram.com/ototoharu/"},"kuki（クキ）":{"ig":"https://www.instagram.com/kuki___2021/","web":"https://kukivintage.official.ec"},"militaria（ミリタリア）":{"ig":"https://www.instagram.com/militaria_tokyo/","web":"https://militariatky.thebase.in/"},"Slat 本店":{"ig":"https://www.instagram.com/slat_vintage_clothing_koenji/","web":"https://fortyone-s.com/"},"あーる工房":{"web":"https://www.rkobo.jp/"},"リサイクルきもの grape":{"web":"http://www.kimono-grape.com/"},"yahso（ヤッソ）":{"ig":"https://www.instagram.com/yahsogram/","web":"http://yahso.jp/"},"easychic（イージーシック）":{"ig":"https://www.instagram.com/easychic_vintage/","web":"https://easychic.thebase.in/"},"Jacob's Ladder（ジェイコブスラダー）":{"ig":"https://www.instagram.com/jacobsladdervintage/","web":"http://www.jacobsladder.jp/"},"AiLeen by GROGGROG":{"ig":"https://www.instagram.com/aileen_by_groggrog_vintage/"},"Liberal（リベラル）":{"ig":"https://www.instagram.com/liberal_koenji/","web":"https://liberal413.thebase.in/"},"COLOR":{"ig":"https://www.instagram.com/colors_asagaya/","web":"https://fashionoutlet.jp/shoplist/asagaya/"},"すみれ洋裁店":{"ig":"https://www.instagram.com/k.t_sumire/","web":"https://peraichi.com/landing_pages/view/xvava"},"エクリュモダンオリエンタル":{"ig":"https://www.instagram.com/ecru.mo/","web":"http://www.asagaya.or.jp/map/7han/modern-oriental.html"},"きもの倶楽部 風流":{"ig":"https://www.instagram.com/kimonoclubhuryuu/","web":"https://huryuu.shop-pro.jp/"},"COPO":{"ig":"https://www.instagram.com/copo_net/","web":"https://copo-net.jp/"},"O.d.B":{"ig":"https://www.instagram.com/odd.delay.blue/","web":"https://shop.odb-c.net/"},"KAWAMURA":{"web":"http://mskawamura.jp/"},"CANDY WOOD":{"ig":"https://www.instagram.com/candywood.tokyo/","web":"https://candywood.theshop.jp/"},"Comyu":{"ig":"https://www.instagram.com/comyu_tokyo/","web":"https://comyu.shop-pro.jp/"},"ヨーカ堂":{"ig":"https://www.instagram.com/itoyokado_official/","web":"https://www.itoyokado.co.jp/"},"越後屋呉服店":{"web":"http://www.asagaya.or.jp/map/2han/echigoya.html"},"HAPPY JACK":{"ig":"https://www.instagram.com/happyjack.usedclothing/","web":"https://ameblo.jp/happyjack-used/"},"adoluvle retrist":{"ig":"https://www.instagram.com/adoluvle.jp/","web":"https://adoluvle.com/"},"STEADY-1":{"web":"https://steady1koenji.wixsite.com/seady-1"},"ZOOL":{"ig":"https://www.instagram.com/zool_jigowatt/","web":"https://zool.shopinfo.jp/"},"Leger":{"ig":"https://www.instagram.com/leger1202/","web":"https://leger1202.thebase.in/"},"KIKI":{"ig":"https://www.instagram.com/kiki_honten/","web":"https://kikiweb.kawaiishop.jp/"},"D clothing":{"ig":"https://www.instagram.com/dclothingkoenji/","web":"https://dclothing.thebase.in/"},"SALLYROAD":{"web":"https://sallyroad.jp/"},"&Co":{"ig":"https://www.instagram.com/and_co_tokyo_store/","web":"https://andcoandco.base.shop/"},"Ourdoor Assist":{"ig":"https://www.instagram.com/outdoor_assist/","web":"http://www.outdoorassist.com/"},"Tatouage":{"ig":"https://www.instagram.com/tatouage_by_zool/"},"JOAH":{"ig":"https://www.instagram.com/joah__official/","web":"http://www.koenji-joah.com/"},"Manaboo":{"ig":"https://www.instagram.com/manaboo_hat_koenji/","web":"https://mana-shop.jp/"},"BIG TIME":{"ig":"https://www.instagram.com/big_time_koenji/","web":"https://bigtime.jp/"},"大黒屋":{"ig":"https://www.instagram.com/kimono_daikokuya/","web":"http://www.k-daikokuya.com/"},"Leberment":{"ig":"https://www.instagram.com/leberment_koenji_shop/","web":"https://www.leberment.org/"},"rokuromi":{"ig":"https://www.instagram.com/rokuromi6963/","web":"https://rokuromi.shop-pro.jp/"},"みずたまきのこ":{"ig":"https://www.instagram.com/mizutamakinoko_koenji/","web":"https://mizutamakinoko.shop/"},"KIKI2":{"ig":"https://www.instagram.com/kiki2_clothing/","web":"https://kikiweb.kawaiishop.jp/"},"LOVER SOUL":{"ig":"https://www.instagram.com/lover_soul_kouenji/","web":"https://kouenji-loversoul.com/"},"ADOLUVLE LITTLE":{"ig":"https://www.instagram.com/adoluvle.jp/","web":"https://adoluvle.com/"},"温故着新":{"ig":"https://www.instagram.com/onkokishin/","web":"http://on-ko-ki-shin.com/"},"GLOVEEEK":{"ig":"https://www.instagram.com/effectone.gloveeek/","web":"https://gloveeek.theshop.jp"},"Cat's Pawn":{"ig":"https://www.instagram.com/cats__paw/"},"Pink":{"web":"https://pinkfurugi.base.shop/"},"トイパラストア":{"web":"https://toypara.com/"},"マリヤ":{"web":"http://www7a.biglobe.ne.jp/~mariya/"},"Wara-bi":{"web":"https://wara-bi.shop/"},"Additional store___":{"ig":"https://www.instagram.com/additional_store/","web":"https://additionalstore.stores.jp/"},"SLUT":{"ig":"https://www.instagram.com/slat_vintage_clothing/","web":"https://fortyone-s.com/"},"Jacob's Ladder":{"ig":"https://www.instagram.com/jacobsladdervintage/","web":"http://www.jacobsladder.jp/"}};
 
+// ----- 営業時間（Web検索で自動収集。キー=店名。h=営業時間, cl=定休日, conf=情報の確度） -----
+const STORE_HOURS = {"JOYED（ジョイド）":{"h":"月〜土 14:00〜22:00 / 日 12:00〜20:00","cl":"火曜日","conf":"medium"},"alt（アルト）":{"h":"13:00〜21:00","cl":"月曜日(月曜が祝日の場合は営業)","conf":"medium"},"often（オフトン）":{"h":"13:00〜18:00","cl":"不定休(実店舗の営業日はInstagramのストーリーズ等で要確認)","conf":"medium"},"yahso（ヤッソ）":{"h":"月〜土 15:00〜23:00・日祝 14:00〜20:00","cl":"不定休","conf":"medium"},"ototoharu（オトトハル）":{"h":"月・火・水 12:00〜20:00 / 金・土・日・祝 12:00〜19:00","cl":"毎週木曜日","conf":"medium"},"kuki（クキ）":{"h":"火・水・金 16:00〜21:00、土・日・祝 15:00〜21:00(2022年頃のInstagram投稿では15:00〜20:00の表記もあり、時期により変動の可能性あり)","cl":"月曜・木曜","conf":"medium"},"Jacob's Ladder（ジェイコブスラダー）":{"h":"13:00〜20:00(平日は13:00〜19:00の場合あり)","cl":"不定休","conf":"medium"},"AiLeen by GROGGROG":{"h":"平日13:00〜21:00・土日祝12:30〜21:00","cl":"年中無休(年末年始を除く)","conf":"medium"},"Liberal（リベラル）":{"h":"13:00〜20:00","cl":"無休(定休日なし。年末年始のみ休業との情報あり)","conf":"medium"},"WHISTLER（ウィスラー）":{"h":"12:00〜21:00","cl":"無し(年中無休)","conf":"medium"},"Jeans Mate":{"h":"9:00〜23:00"},"あーる工房":{"h":"10:00〜20:00(月・火・木・金・土・日・祝)","cl":"水曜","conf":"medium"},"militaria（ミリタリア）":{"h":"14:00〜20:00","cl":"不定休"},"Slat 本店":{"h":"平日 12:30〜19:30、土曜・連休中日は12:30〜20:00","cl":"不定休(情報源により「定休日なし」「年末年始のみ休業」との記載もあり、詳細は要確認)","conf":"medium"},"ルナ・キクヤ":{"h":"10:30〜20:30","cl":"不定休"},"ユニクロ":{"h":"10:00〜20:30(年中ほぼ無休)","cl":"定休日なし(ルミネ荻窪の休館日を除く)"},"洋服の青山":{"h":"10:30〜20:00","cl":"年中無休(定休日の記載なし)"},"リサイクルきもの grape":{"h":"12:00〜19:00","cl":"月・火曜日","conf":"medium"},"COLOR":{"h":"10:00〜20:00","cl":"定休日なし(年末年始を除く)","conf":"medium"},"エクリュモダンオリエンタル":{"h":"11:00〜19:00","cl":"水曜日","conf":"medium"},"きもの倶楽部 風流":{"h":"12:00〜18:00","cl":"水曜・土曜(第二日曜日も休み)","conf":"medium"}};
+
 // ----- OSM個人系／チェーン -----
 const igURL = v => /^https?:/.test(String(v)) ? v : `https://instagram.com/${String(v).replace(/^@/,"")}`;
+function hoursRow(k, s){
+  const h = STORE_HOURS[k];
+  if(h && (h.h || h.cl)){
+    const cl = h.cl ? (/休/.test(h.cl) ? h.cl : `${h.cl}定休`) : "";
+    let t = [h.h, cl].filter(Boolean).join("／");
+    if(h.conf==="low") t += ' <span style="color:#b45309">※要確認</span>';
+    return `🕒 ${t}`;
+  }
+  return (s && s.hrs) ? `🕒 ${s.hrs}` : "";   // 収集できなかった店はOSMタグの営業時間にフォールバック
+}
 function linkRows(k, s){
   const ex = STORE_LINKS[k] || {};
   const web = (s && s.web) || ex.web;
   const ig  = (s && s.ig)  || ex.ig;
   const rows=[];
   if(s && s.ph) rows.push(`📞 <a href="tel:${s.ph}">${s.ph}</a>`);
-  if(s && s.hrs) rows.push(`🕒 ${s.hrs}`);
+  const hr = hoursRow(k, s);
+  if(hr) rows.push(hr);
   if(web) rows.push(`<a href="${web}" target="_blank" rel="noopener">🔗 サイト</a>`);
   if(ig) rows.push(`<a href="${igURL(ig)}" target="_blank" rel="noopener">📷 Instagram</a>`);
   return rows.length ? `<p class="dmeta">${rows.join("<br>")}</p>` : "";
@@ -702,6 +722,55 @@ function updateVisitCount(){
   STORES.forEach(s=>{ total++; if(isVisited(s.name)) done++; });
   OSM_SHOPS.forEach(s=>{ if(s.c) return; total++; if(isVisited(osmKey(s))) done++; });
   visitDiv.innerHTML = `✅ 訪問済み <b>${done}</b> / ${total} 店`;
+}
+
+// ===== 現在地表示 =====
+// 📍ボタンで watchPosition を開始し、青ドット＋精度円を地図に表示（移動に追従）。もう一度押すと停止。
+// 位置情報APIはHTTPS(GitHub Pages)でのみ動作。file://直開きでは取得できないブラウザがある点に注意。
+let locBtn=null, locWatchId=null, locMarker=null, locCircle=null, locFirstFix=false;
+const locCtl = L.control({position:"bottomright"});
+locCtl.onAdd = ()=>{
+  locBtn = L.DomUtil.create("button","locbtn");
+  locBtn.innerHTML = "📍";
+  locBtn.title = "現在地を表示";
+  L.DomEvent.disableClickPropagation(locBtn);
+  locBtn.onclick = toggleLocate;
+  return locBtn;
+};
+locCtl.addTo(map);
+function toggleLocate(){
+  if(locWatchId!=null){ stopLocate(); return; }
+  if(!navigator.geolocation){ alert("この端末・ブラウザでは位置情報が使えません"); return; }
+  locBtn.classList.add("on");
+  locBtn.innerHTML = "⏳";
+  locFirstFix = true;
+  locWatchId = navigator.geolocation.watchPosition(pos=>{
+    const ll = [pos.coords.latitude, pos.coords.longitude];
+    if(!locMarker){
+      locCircle = L.circle(ll, { radius:pos.coords.accuracy, color:"#2563eb", weight:1, fillColor:"#2563eb", fillOpacity:.12, interactive:false }).addTo(map);
+      locMarker = L.marker(ll, { interactive:false, zIndexOffset:3000,
+        icon:L.divIcon({ className:"", html:'<div class="locdot"></div>', iconSize:[16,16], iconAnchor:[8,8] }) }).addTo(map);
+    } else {
+      locMarker.setLatLng(ll);
+      locCircle.setLatLng(ll).setRadius(pos.coords.accuracy);
+    }
+    if(locFirstFix){
+      locFirstFix = false;
+      locBtn.innerHTML = "📍";
+      map.setView(ll, Math.max(map.getZoom(), 16));
+    }
+  }, err=>{
+    stopLocate();
+    alert(err.code===1
+      ? "位置情報が許可されていません。ブラウザの設定でこのサイトの位置情報を許可してください。"
+      : "現在地を取得できませんでした。電波状況の良い場所でもう一度お試しください。");
+  }, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
+}
+function stopLocate(){
+  if(locWatchId!=null){ navigator.geolocation.clearWatch(locWatchId); locWatchId=null; }
+  if(locMarker){ map.removeLayer(locMarker); locMarker=null; }
+  if(locCircle){ map.removeLayer(locCircle); locCircle=null; }
+  if(locBtn){ locBtn.classList.remove("on"); locBtn.innerHTML="📍"; }
 }
 
 // ===== モバイルタブ（地図⇔リスト） =====
