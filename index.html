@@ -189,7 +189,7 @@
 
     <footer>
       服屋データ＝<b>OpenStreetMap</b>(杉並区全域)から取得し、ユニクロ等の超大手・買取/質・誤登録を除外した個人/独立系。<b>OSM登録ベースなので実数より少なめ</b>。<br>
-      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07i
+      市区境界＝<b>国土数値情報(行政区域)</b>。座標・徒歩分は概算。営業時間/定休日/現存は要確認。訪問チェック・メモは「保存」ボタンでGitHubに記録され2人で共有（未設定時はこの端末のみ）。<br>表示版: 2026-07-07j
     </footer>
   </div>
   <div id="map"></div>
@@ -676,8 +676,8 @@ function updateLegend(){
 }
 legend.addTo(map);
 
-// ===== 訪問数カウンター（地図左下） =====
-const visitCtl = L.control({position:"bottomleft"});
+// ===== 訪問数カウンター（凡例の直下に表示） =====
+const visitCtl = L.control({position:"topright"});
 let visitDiv = null;
 visitCtl.onAdd = ()=>{ visitDiv = L.DomUtil.create("div","visitcount"); return visitDiv; };
 visitCtl.addTo(map);
